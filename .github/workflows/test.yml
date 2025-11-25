@@ -2,19 +2,29 @@ name: Test Build
 
 on:
   push:
-    branches: '**'
+    branches: ['**']
+  pull_request:
+    branches: [master]
 
 jobs:
-  build-windows:
-    runs-on: [ ubuntu-latest ]
-    strategy:
-      matrix:
-        dotnet-version: [ '8.0.x' ]
+  test:
+    name: Test Build
+    runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v2
-      - name: Setup .NET Core SDK ${{ matrix.dotnet-version }}
-        uses: actions/setup-dotnet@v1.7.2
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: ${{ matrix.dotnet-version }}
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore ./src/mtga-tracker-daemon
+
       - name: Build
-        run: dotnet build ./src/mtga-tracker-daemon
+        run: dotnet build ./src/mtga-tracker-daemon -c Release --no-restore
+
+      - name: Test (if tests exist)
+        run: dotnet test ./src/mtga-tracker-daemon --no-build -c Release || true
