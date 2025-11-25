@@ -1,0 +1,126 @@
+name: Build
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+  workflow_call:
+    outputs:
+      artifact-windows:
+        description: 'Windows artifact name'
+        value: ${{ jobs.build-windows.outputs.artifact-name }}
+      artifact-macos:
+        description: 'macOS artifact name'
+        value: ${{ jobs.build-macos.outputs.artifact-name }}
+      artifact-linux:
+        description: 'Linux artifact name'
+        value: ${{ jobs.build-linux.outputs.artifact-name }}
+
+jobs:
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+    outputs:
+      artifact-name: ${{ steps.artifact.outputs.name }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore ./src/mtga-tracker-daemon
+
+      - name: Build
+        run: dotnet publish ./src/mtga-tracker-daemon -c Release -r win-x64 --self-contained -o ./publish/win-x64
+
+      - name: Set artifact name
+        id: artifact
+        run: echo "name=daemon-windows-x64" >> $env:GITHUB_OUTPUT
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: daemon-windows-x64
+          path: ./publish/win-x64/
+          retention-days: 7
+
+  build-macos:
+    name: Build macOS
+    runs-on: macos-latest
+    outputs:
+      artifact-name: ${{ steps.artifact.outputs.name }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore ./src/mtga-tracker-daemon
+
+      - name: Build x64
+        run: dotnet publish ./src/mtga-tracker-daemon -c Release -r osx-x64 --self-contained -o ./publish/osx-x64
+
+      - name: Build arm64
+        run: dotnet publish ./src/mtga-tracker-daemon -c Release -r osx-arm64 --self-contained -o ./publish/osx-arm64
+
+      - name: Set artifact name
+        id: artifact
+        run: echo "name=daemon-macos" >> $GITHUB_OUTPUT
+
+      - name: Upload x64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: daemon-macos-x64
+          path: ./publish/osx-x64/
+          retention-days: 7
+
+      - name: Upload arm64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: daemon-macos-arm64
+          path: ./publish/osx-arm64/
+          retention-days: 7
+
+  build-linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+    outputs:
+      artifact-name: ${{ steps.artifact.outputs.name }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore ./src/mtga-tracker-daemon
+
+      - name: Build
+        run: dotnet publish ./src/mtga-tracker-daemon -c Release -r linux-x64 --self-contained -o ./publish/linux-x64
+
+      - name: Set artifact name
+        id: artifact
+        run: echo "name=daemon-linux-x64" >> $GITHUB_OUTPUT
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: daemon-linux-x64
+          path: ./publish/linux-x64/
+          retention-days: 7
